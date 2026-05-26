@@ -1,0 +1,35 @@
+# RSSHub finance routes for the first real data-source test.
+# Copy one or more URLs into RSS_URLS in .env, separated by commas.
+#
+# RSSHub finance docs:
+# https://rsshub.netlify.app/routes/finance
+
+# 财联社电报：全部
+https://rsshub.app/cls/telegraph
+
+# 财联社电报：公司公告
+https://rsshub.app/cls/telegraph/announcement
+
+# 财联社电报：看盘
+https://rsshub.app/cls/telegraph/watch
+
+# 财联社电报：加红
+https://rsshub.app/cls/telegraph/red
+
+# 东方财富搜索：重大合同
+https://rsshub.app/eastmoney/search/%E9%87%8D%E5%A4%A7%E5%90%88%E5%90%8C
+
+# 东方财富搜索：中标
+https://rsshub.app/eastmoney/search/%E4%B8%AD%E6%A0%87
+
+# 东方财富搜索：业绩预增
+https://rsshub.app/eastmoney/search/%E4%B8%9A%E7%BB%A9%E9%A2%84%E5%A2%9E
+
+# 东方财富搜索：回购
+https://rsshub.app/eastmoney/search/%E5%9B%9E%E8%B4%AD
+
+# 每经网要闻
+https://rsshub.app/nbd
+
+# 财经网滚动新闻
+https://rsshub.app/caijing/roll
