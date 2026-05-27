@@ -13,19 +13,22 @@ class FeishuNotifier:
 
     def should_push(self, message: StoredMessage) -> bool:
         cls = message.classification
-        return cls.is_positive and cls.level in {"S", "A"} and cls.confidence >= 75
+        return cls.tier in {1, 2}
 
     def push(self, message: StoredMessage) -> None:
         if not self.should_push(message):
             return
 
         text = self._format_text(message)
+        self.push_text(text)
+        message.pushed = True
+        message.push_time = now_iso()
+        message.status = "dry_run_已推送" if self.dry_run or not self.webhook else "已推送"
+
+    def push_text(self, text: str) -> None:
         if self.dry_run or not self.webhook:
             print("[DRY-RUN] Feishu push:")
             print(text)
-            message.pushed = True
-            message.push_time = now_iso()
-            message.status = "dry_run_已推送"
             return
 
         last_error: Exception | None = None
@@ -44,9 +47,6 @@ class FeishuNotifier:
                 time.sleep(2)
         if last_error:
             raise last_error
-        message.pushed = True
-        message.push_time = now_iso()
-        message.status = "已推送"
 
     def _format_text(self, message: StoredMessage) -> str:
         item = message.item

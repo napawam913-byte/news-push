@@ -35,9 +35,48 @@ class Settings:
     enable_sample_collector: bool
     enable_rss_collector: bool
     enable_akshare_stock_news: bool
+    enable_cninfo_collector: bool
+    enable_cninfo_relation_collector: bool
+    enable_eastmoney_notice_collector: bool
+    enable_eastmoney_research_collector: bool
+    enable_caixin_collector: bool
+    enable_akshare_realtime_news_collector: bool
+    enable_baidu_calendar_collector: bool
+    enable_stock_hot_rank_collector: bool
+    enable_cctv_news_collector: bool
+    enable_cninfo_rating_collector: bool
     rss_urls: list[str]
     stock_codes: list[str]
+    cninfo_stock_codes: list[str]
+    cninfo_market: str
+    cninfo_categories: list[str]
+    cninfo_lookback_days: int
+    cninfo_relation_lookback_days: int
+    eastmoney_notice_categories: list[str]
+    eastmoney_notice_lookback_days: int
+    eastmoney_research_stock_codes: list[str]
+    eastmoney_research_lookback_days: int
+    akshare_realtime_sources: list[str]
+    akshare_realtime_limit_per_source: int
+    baidu_calendar_lookback_days: int
+    baidu_economic_min_importance: int
+    stock_hot_rank_top_n: int
+    cctv_news_lookback_days: int
+    cninfo_rating_lookback_days: int
     interval_seconds: int
+    interval_min_seconds: int
+    interval_max_seconds: int
+    workday_only: bool
+    active_start_hour: int
+    active_end_hour: int
+    batch_push_enabled: bool
+    max_hotspots: int
+    max_recommendations: int
+    enable_fundamental_scoring: bool
+    fundamental_report_date: str
+    min_fundamental_score: int
+    quality_stock_codes: set[str]
+    min_recommend_score: int
     data_dir: Path
     feishu_webhook: str
     feishu_app_id: str
@@ -54,14 +93,55 @@ def load_settings() -> Settings:
             encoding="utf-8-sig",
         )
 
+    interval_seconds = _int("INTERVAL_SECONDS", 7200)
+
     return Settings(
         dry_run=_bool("DRY_RUN", True),
         enable_sample_collector=_bool("ENABLE_SAMPLE_COLLECTOR", True),
         enable_rss_collector=_bool("ENABLE_RSS_COLLECTOR", False),
         enable_akshare_stock_news=_bool("ENABLE_AKSHARE_STOCK_NEWS", False),
+        enable_cninfo_collector=_bool("ENABLE_CNINFO_COLLECTOR", False),
+        enable_cninfo_relation_collector=_bool("ENABLE_CNINFO_RELATION_COLLECTOR", False),
+        enable_eastmoney_notice_collector=_bool("ENABLE_EASTMONEY_NOTICE_COLLECTOR", False),
+        enable_eastmoney_research_collector=_bool("ENABLE_EASTMONEY_RESEARCH_COLLECTOR", False),
+        enable_caixin_collector=_bool("ENABLE_CAIXIN_COLLECTOR", False),
+        enable_akshare_realtime_news_collector=_bool("ENABLE_AKSHARE_REALTIME_NEWS", False),
+        enable_baidu_calendar_collector=_bool("ENABLE_BAIDU_CALENDAR_COLLECTOR", False),
+        enable_stock_hot_rank_collector=_bool("ENABLE_STOCK_HOT_RANK_COLLECTOR", False),
+        enable_cctv_news_collector=_bool("ENABLE_CCTV_NEWS_COLLECTOR", False),
+        enable_cninfo_rating_collector=_bool("ENABLE_CNINFO_RATING_COLLECTOR", False),
         rss_urls=_csv("RSS_URLS"),
         stock_codes=_csv("STOCK_CODES"),
-        interval_seconds=_int("INTERVAL_SECONDS", 300),
+        cninfo_stock_codes=_csv("CNINFO_STOCK_CODES"),
+        cninfo_market=os.getenv("CNINFO_MARKET", "沪深京"),
+        cninfo_categories=_csv("CNINFO_CATEGORIES"),
+        cninfo_lookback_days=_int("CNINFO_LOOKBACK_DAYS", 7),
+        cninfo_relation_lookback_days=_int("CNINFO_RELATION_LOOKBACK_DAYS", 30),
+        eastmoney_notice_categories=_csv("EASTMONEY_NOTICE_CATEGORIES"),
+        eastmoney_notice_lookback_days=_int("EASTMONEY_NOTICE_LOOKBACK_DAYS", 1),
+        eastmoney_research_stock_codes=_csv("EASTMONEY_RESEARCH_STOCK_CODES"),
+        eastmoney_research_lookback_days=_int("EASTMONEY_RESEARCH_LOOKBACK_DAYS", 30),
+        akshare_realtime_sources=_csv("AKSHARE_REALTIME_SOURCES"),
+        akshare_realtime_limit_per_source=_int("AKSHARE_REALTIME_LIMIT_PER_SOURCE", 50),
+        baidu_calendar_lookback_days=_int("BAIDU_CALENDAR_LOOKBACK_DAYS", 1),
+        baidu_economic_min_importance=_int("BAIDU_ECONOMIC_MIN_IMPORTANCE", 2),
+        stock_hot_rank_top_n=_int("STOCK_HOT_RANK_TOP_N", 20),
+        cctv_news_lookback_days=_int("CCTV_NEWS_LOOKBACK_DAYS", 2),
+        cninfo_rating_lookback_days=_int("CNINFO_RATING_LOOKBACK_DAYS", 3),
+        interval_seconds=interval_seconds,
+        interval_min_seconds=_int("INTERVAL_MIN_SECONDS", interval_seconds),
+        interval_max_seconds=_int("INTERVAL_MAX_SECONDS", max(interval_seconds, 10800)),
+        workday_only=_bool("WORKDAY_ONLY", True),
+        active_start_hour=_int("ACTIVE_START_HOUR", 7),
+        active_end_hour=_int("ACTIVE_END_HOUR", 24),
+        batch_push_enabled=_bool("BATCH_PUSH_ENABLED", True),
+        max_hotspots=_int("MAX_HOTSPOTS", 8),
+        max_recommendations=_int("MAX_RECOMMENDATIONS", 5),
+        enable_fundamental_scoring=_bool("ENABLE_FUNDAMENTAL_SCORING", True),
+        fundamental_report_date=os.getenv("FUNDAMENTAL_REPORT_DATE", ""),
+        min_fundamental_score=_int("MIN_FUNDAMENTAL_SCORE", 70),
+        quality_stock_codes=set(_csv("QUALITY_STOCK_CODES")),
+        min_recommend_score=_int("MIN_RECOMMEND_SCORE", 85),
         data_dir=Path(os.getenv("DATA_DIR", "data")),
         feishu_webhook=os.getenv("FEISHU_WEBHOOK", ""),
         feishu_app_id=os.getenv("FEISHU_APP_ID", ""),

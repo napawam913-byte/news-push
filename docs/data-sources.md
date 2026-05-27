@@ -1,116 +1,86 @@
 # 数据源接入说明
 
-## 第一阶段策略
+当前项目优先接入 **免费、公开、无自有 API key** 的数据源。所有源只做消息采集、规则筛选和飞书投送，不做投资分析、不做个股推荐。
 
-测试版先接三类数据源：
+## 当前已接入并可开启的数据源
 
-```text
-RSSHub 财经路由
-AKShare 个股新闻
-后续公告采集器
-```
+| 数据源 | 采集器 | 类型 | 说明 |
+| --- | --- | --- | --- |
+| RSSHub 财经路由 | `rss` | 财经新闻/RSS | 财联社、电报、东方财富搜索等 RSS 路由；公共实例不稳定，超时会跳过 |
+| AKShare 财经快讯 | `akshare_realtime_news` | 7x24 快讯 | 财联社、东方财富、新浪、同花顺、富途、东方财富财经早餐 |
+| AKShare 东方财富个股新闻 | `akshare_stock_news` | 个股新闻 | 按 `STOCK_CODES` 股票池抓东方财富个股新闻 |
+| 百度财经日历 | `baidu_calendar` | 财经日历/财报/分红/停复牌 | 宏观事件、A 股财报披露、分红除权、停复牌提醒 |
+| 东方财富 A 股热度 | `stock_hot_rank` | 热点榜 | 东方财富人气榜、飙升榜；百度 A 股热搜可用时自动采集 |
+| 央视新闻联播文字稿 | `cctv_news` | 政策新闻 | 适合捕捉宏观政策和产业政策类中性消息 |
+| 巨潮资讯公告 | `cninfo_announcements` | 个股公告 | 按关注股票池抓 CNINFO 公告 |
+| 巨潮投资者关系 | `cninfo_relations` | 调研/投资者关系 | 按关注股票池抓调研和投资者关系记录 |
+| 巨潮投资评级 | `cninfo_ratings` | 机构观点 | 抓巨潮评级预测中心的机构评级记录 |
+| 东方财富全市场公告 | `eastmoney_notices` | 全市场公告 | 按日期抓全市场公告，数量大，依赖规则筛选 |
+| 东方财富个股研报 | `eastmoney_research` | 个股研报 | 按股票池抓东方财富研报 |
+| 财新数据通 | `caixin` | 财经新闻 | 财新数据通新闻摘要，能识别到 A 股时会补股票代码 |
 
-当前推荐先跑 RSSHub，因为它最容易验证完整流程。
-
-## 1. RSSHub
-
-RSSHub 官方财经路由里有财联社电报、东方财富搜索、每经网、财经网等路由。
-
-参考：
-
-```text
-https://rsshub.netlify.app/routes/finance
-```
-
-本项目已提供预设：
-
-```text
-config/rss_sources.example.txt
-```
-
-启用方式：
+## 当前 `.env` 推荐开启方式
 
 ```text
 ENABLE_SAMPLE_COLLECTOR=false
 ENABLE_RSS_COLLECTOR=true
-RSS_URLS=https://rsshub.app/cls/telegraph/announcement,https://rsshub.app/eastmoney/search/%E4%B8%AD%E6%A0%87
-```
-
-建议测试时先保持：
-
-```text
-DRY_RUN=true
-```
-
-也可以复制专用测试配置，不影响真实 `.env`：
-
-```powershell
-Copy-Item .env.rss-test.example .env.rss-test
-$env:ENV_FILE='.env.rss-test'
-.\.venv\Scripts\python.exe -m app.main --once
-```
-
-确认不会误推送后，再改成：
-
-```text
-DRY_RUN=false
-```
-
-## 2. AKShare 个股新闻
-
-AKShare 官方文档说明它提供 A 股股票数据，并包含东方财富指定个股新闻资讯接口。
-
-参考：
-
-```text
-https://akshare.akfamily.xyz/data/stock/stock.html
-```
-
-安装：
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install akshare
-```
-
-启用：
-
-```text
-ENABLE_SAMPLE_COLLECTOR=false
+ENABLE_AKSHARE_REALTIME_NEWS=true
 ENABLE_AKSHARE_STOCK_NEWS=true
+ENABLE_BAIDU_CALENDAR_COLLECTOR=true
+ENABLE_STOCK_HOT_RANK_COLLECTOR=true
+ENABLE_CCTV_NEWS_COLLECTOR=true
+ENABLE_CNINFO_COLLECTOR=true
+ENABLE_CNINFO_RELATION_COLLECTOR=true
+ENABLE_CNINFO_RATING_COLLECTOR=true
+ENABLE_EASTMONEY_NOTICE_COLLECTOR=true
+ENABLE_EASTMONEY_RESEARCH_COLLECTOR=true
+ENABLE_CAIXIN_COLLECTOR=true
+```
+
+关注股票池：
+
+```text
 STOCK_CODES=300750,002594,600519
+CNINFO_STOCK_CODES=300750,002594,600519
+EASTMONEY_RESEARCH_STOCK_CODES=300750,002594,600519
 ```
 
-适合：
+全市场公告和快讯类源数量很大，飞书报告只会展示规则筛选后的一级/二级消息，不会把所有入库消息都发出来。
+
+## 关键参数
 
 ```text
-关注股票池
-个股新闻监控
-后续和飞书多维表格股票池联动
+AKSHARE_REALTIME_SOURCES=cls,eastmoney,sina,ths,futu,cjzc
+AKSHARE_REALTIME_LIMIT_PER_SOURCE=50
+BAIDU_CALENDAR_LOOKBACK_DAYS=1
+BAIDU_ECONOMIC_MIN_IMPORTANCE=2
+STOCK_HOT_RANK_TOP_N=20
+CCTV_NEWS_LOOKBACK_DAYS=2
+CNINFO_RATING_LOOKBACK_DAYS=3
+EASTMONEY_NOTICE_LOOKBACK_DAYS=1
+EASTMONEY_RESEARCH_LOOKBACK_DAYS=30
+CNINFO_LOOKBACK_DAYS=7
+CNINFO_RELATION_LOOKBACK_DAYS=30
 ```
 
-## 3. 公告源
+## 数据源稳定性
 
-公告源是正式版的重点，优先级：
+AKShare 和 RSSHub 都是公开源，不保证 SLA。当前处理方式是：某个源超时或报错时打印 warning，然后继续跑其他源。
+
+已知情况：
+
+- RSSHub 公共实例经常 403 或超时，所以代码已把单个 RSS 请求超时缩短到 5 秒。
+- 巨潮投资评级当天可能暂无数据，AKShare 会抛字段长度错误；采集器会跳过当天并继续查最近几天。
+- 百度 A 股热搜接口偶发返回异常；东方财富人气榜和飙升榜作为主要热度源。
+
+## 后续可选但需要额外条件的源
+
+这些暂时没有默认接入，因为需要 token、商业授权或更复杂反爬维护：
 
 ```text
-巨潮资讯
-上交所公告
-深交所公告
-北交所公告
+Tushare Pro
+Wind / Choice / 同花顺 iFinD
+交易所官网原始公告直连
+自建 RSSHub
+付费舆情/新闻 API
 ```
-
-公告类消息权威性高，但采集器需要单独适配字段和反爬限制。建议等 RSSHub 和 AKShare 跑通后再接。
-
-## 推荐上线顺序
-
-```text
-1. RSSHub 财联社/东方财富搜索
-2. AKShare 个股新闻
-3. 巨潮资讯公告
-4. 交易所公告
-5. 飞书多维表格规则配置
-```
-
-## 注意
-
-公开源不提供 SLA，适合作为第一阶段和轻量生产验证。后续如果依赖度变高，应逐步增加商业授权数据源或至少保留双源校验。

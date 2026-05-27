@@ -2,15 +2,26 @@
 
 这是一个 A 股利好消息监控和飞书推送测试项目。
 
+数据源清单、未启用数据源和命令行运行方式见：
+
+```text
+docs/runbook-data-sources.md
+```
+
 当前版本已经支持：
 
 - 模拟数据采集
 - AKShare 个股新闻采集
 - RSS 数据源采集
+- 巨潮资讯 CNINFO 公告采集
 - 关键词利好/负面判断
 - 本地去重
 - 本地 JSONL 运行记录
 - 飞书机器人推送
+- 飞书批次热点摘要推送
+- 工作日 7:00-24:00 调度窗口
+- 2-3 小时随机推送间隔
+- 规则筛选后的飞书消息投送
 - 飞书多维表格写入封装
 - dry-run 测试模式
 
@@ -27,7 +38,8 @@ https://github.com/napawam913-byte/news-push.git
 ```text
 news-push/
   app/
-    collectors/
+   collectors/
+      cninfo_announcements.py
       akshare_stock_news.py
       rss.py
       sample.py
@@ -99,6 +111,7 @@ DRY_RUN=true
 ENABLE_SAMPLE_COLLECTOR=true
 ENABLE_RSS_COLLECTOR=false
 ENABLE_AKSHARE_STOCK_NEWS=false
+BATCH_PUSH_ENABLED=true
 ```
 
 ### 5. 跑通模拟数据
@@ -113,6 +126,8 @@ ENABLE_AKSHARE_STOCK_NEWS=false
 collectors=sample dry_run=True
 done new=2 pushed=1
 ```
+
+现在默认是批次推送，控制台会打印一条类似 `【财经利好热点】` 的摘要消息，而不是每条利好单独推送。
 
 第二次再运行通常会变成：
 
@@ -182,6 +197,31 @@ DRY_RUN=true
 
 这样不会真的推送到飞书，只会在控制台打印。
 
+## 配置巨潮资讯公告源
+
+巨潮公告源通过 AKShare 的 `stock_zh_a_disclosure_report_cninfo` 接口获取。接口目标是巨潮资讯公告查询页，字段包含代码、简称、公告标题、公告时间、公告链接。
+
+在 `.env` 中开启：
+
+```text
+ENABLE_CNINFO_COLLECTOR=true
+CNINFO_STOCK_CODES=300750,002594,600519
+CNINFO_MARKET=沪深京
+CNINFO_CATEGORIES=
+CNINFO_LOOKBACK_DAYS=7
+```
+
+说明：
+
+```text
+CNINFO_STOCK_CODES  要查询公告的股票池；为空时使用 STOCK_CODES
+CNINFO_MARKET       默认沪深京
+CNINFO_CATEGORIES   可留空表示全部公告；也可填业绩预告,风险提示,日常经营等
+CNINFO_LOOKBACK_DAYS 每次查询最近多少天公告
+```
+
+AKShare 这个接口是按股票代码查询，不建议每 5-10 分钟扫全市场。更合适的方式是维护一个关注股票池，或者后续做“低频全市场公告扫描 + 高频关注池扫描”。
+
 ## 测试 RSS 数据源
 
 复制 RSS 测试配置：
@@ -225,6 +265,67 @@ FEISHU_BITABLE_TABLE_ID=
 ```
 
 这些也属于密钥，不要提交。
+
+## 调度和推送节奏
+
+连续运行时，默认只在工作日 7:00-24:00 执行：
+
+```text
+WORKDAY_ONLY=true
+ACTIVE_START_HOUR=7
+ACTIVE_END_HOUR=24
+INTERVAL_MIN_SECONDS=7200
+INTERVAL_MAX_SECONDS=10800
+```
+
+也就是每轮任务完成后，随机等待 2-3 小时再跑下一轮。`--once` 模式用于手动测试，会直接跑一次，不受时间窗限制。
+
+## 消息筛选
+
+项目只做消息筛选和飞书投送，不做投资分析、不做个股推荐。
+
+```text
+ENABLE_FUNDAMENTAL_SCORING=false
+FUNDAMENTAL_REPORT_DATE=
+MIN_FUNDAMENTAL_SCORE=70
+QUALITY_STOCK_CODES=300750,002594,600519
+MIN_RECOMMEND_SCORE=85
+```
+
+当前 `ENABLE_FUNDAMENTAL_SCORING=false`，不会读取财务指标，不会输出基本面分数或推荐分。
+
+飞书推送只会包含已识别出 A 股代码的利好消息。RSS 里无法匹配到 A 股代码的行业新闻、未上市公司、港股/美股/ETF 等，只会进入本地记录，不会进入重点消息和个股推荐。
+
+当前关注分三档：
+
+```text
+一级：强利好 / 强利空
+  立即进入飞书报告。
+
+二级：普通利好 / 普通利空 / 重要中性
+  进入飞书汇总区，用于跟踪行业、政策、资金、风险变化。
+
+三级：一般中性 / 噪音
+  只入库，不推送。
+```
+
+市场/行业热点可以进入二级汇总，但不会被当成个股推荐。
+
+如果真实 A 股新闻只写公司全称、品牌名、子公司名，可以维护别名表：
+
+```text
+config/stock_aliases.csv
+```
+
+格式：
+
+```text
+alias,stock_code,stock_name,note
+中国国际金融股份有限公司,601995,中金公司,公司全称
+蓝电品牌,601127,赛力斯,品牌
+```
+
+识别优先级是：别名表 > 6 位股票代码 > A 股简称。
 
 ## 常用开发命令
 
@@ -277,6 +378,7 @@ data/seen_ids.txt
 - 公开数据源没有 SLA。
 - RSSHub 公共实例不稳定，建议后续自建。
 - 利好判断目前主要靠规则，后续需要加入 LLM 二次分类。
+- 当前只做规则筛选和消息投送，不做基本面分析、估值分析或推荐分。
 - 飞书多维表格写入还需要真实字段配置后再联调。
 
 ## 下一步
@@ -287,5 +389,7 @@ data/seen_ids.txt
 2. 接入巨潮资讯公告源。
 3. 接入飞书多维表格真实写入。
 4. 增加 LLM 二次分类。
-5. 做服务器部署脚本。
-6. 增加日志和错误告警。
+5. 增加估值和行业比较：PE/PB 分位、行业 ROE 横向排名。
+6. 接入连续多期趋势：最近 4-8 个季度稳定性。
+7. 做服务器部署脚本。
+8. 增加日志和错误告警。

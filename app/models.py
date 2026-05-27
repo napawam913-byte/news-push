@@ -45,6 +45,8 @@ class Classification:
     hit_keywords: list[str]
     negative_keywords: list[str]
     reason: str
+    sentiment: str = "neutral"
+    tier: int = 3
 
 
 @dataclass
