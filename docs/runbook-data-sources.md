@@ -138,6 +138,13 @@ cd D:\learning\news-push
 
 这条命令没有 `--once`，所以会一直循环运行。
 
+如果使用 exe：
+
+```powershell
+cd D:\learning\news-push\dist
+.\news-push.exe
+```
+
 当前 `.env` 配置是：
 
 ```text
@@ -171,11 +178,74 @@ cd D:\learning\news-push
 ['rss', 'akshare_realtime_news', 'akshare_stock_news', 'baidu_calendar', 'stock_hot_rank', 'cctv_news', 'cninfo_announcements', 'cninfo_relations', 'cninfo_ratings', 'eastmoney_notices', 'eastmoney_research', 'caixin']
 ```
 
+如果使用 exe，更推荐：
+
+```powershell
+cd D:\learning\news-push\dist
+.\news-push.exe --check-config
+```
+
+正常应看到：
+
+```text
+dry_run=False
+webhook_configured=True
+data_dir=D:\learning\news-push\data
+```
+
 ## 四、窗口保持运行的注意事项
 
 命令行窗口保持打开，程序就会持续运行。
 
-如果你关闭 PowerShell 窗口，程序就会停止。
+如果你关闭 PowerShell 窗口，正常情况下程序会停止。
+
+为避免异常关闭后残留后台进程，新版本已经加入单实例控制。持续运行时会写入：
+
+```text
+D:\learning\news-push\data\news-push.pid
+```
+
+查看是否仍在后台运行：
+
+```powershell
+cd D:\learning\news-push\dist
+.\news-push.exe --status
+```
+
+如果看到：
+
+```text
+running=True
+```
+
+说明还有进程在后台运行。
+
+停止后台运行：
+
+```powershell
+cd D:\learning\news-push\dist
+.\news-push.exe --stop
+```
+
+正常会输出：
+
+```text
+stopped=True
+```
+
+再次查看：
+
+```powershell
+.\news-push.exe --status
+```
+
+应看到：
+
+```text
+running=False
+```
+
+如果已有一个持续运行进程，再次启动 `.\news-push.exe` 会直接退出并提示使用 `--status` 或 `--stop`，不会重复启动多个后台进程。
 
 如果电脑睡眠、断网、关机，程序也会停止或无法正常采集。
 
@@ -183,6 +253,12 @@ cd D:\learning\news-push
 
 ```text
 在 PowerShell 窗口按 Ctrl + C
+```
+
+或者使用：
+
+```powershell
+.\news-push.exe --stop
 ```
 
 如果只是想放着运行：
@@ -230,4 +306,3 @@ cd D:\learning\news-push
 只把规则筛选后的一级/二级消息推送到飞书
 未命中规则的消息只入库，不推送
 ```
-

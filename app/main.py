@@ -20,6 +20,7 @@ from app.config import Settings, load_settings
 from app.feishu.client import FeishuBitableClient, FeishuNotifier
 from app.fundamentals.scorer import AkshareFundamentalScorer, FundamentalScore
 from app.models import Classification, StoredMessage, now_iso
+from app.process_control import SingleInstance, read_status, stop_running_process
 from app.reports.hotspot_report import HotspotReportBuilder
 from app.rules.classifier import RuleClassifier
 from app.scheduler import (
@@ -260,9 +261,24 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true", help="Run one cycle and exit")
     parser.add_argument("--check-config", action="store_true", help="Print config summary and exit")
+    parser.add_argument("--status", action="store_true", help="Print running process status and exit")
+    parser.add_argument("--stop", action="store_true", help="Stop the running background process and exit")
     args = parser.parse_args()
 
     settings = load_settings()
+    if args.status:
+        status = read_status(settings.data_dir)
+        print(f"running={status.running}")
+        print(f"pid={status.pid or ''}")
+        print(f"started_at={status.started_at}")
+        print(f"pid_file={status.pid_file or ''}")
+        return
+
+    if args.stop:
+        stopped = stop_running_process(settings.data_dir)
+        print("stopped=True" if stopped else "stopped=False")
+        return
+
     if args.check_config:
         collectors = build_collectors(settings)
         print(f"dry_run={settings.dry_run}")
@@ -275,17 +291,27 @@ def main() -> None:
         run_once(settings)
         return
 
-    while True:
-        if not is_active_now(settings):
-            sleep_seconds = seconds_until_next_active_window(settings)
-            print(f"outside active window, sleep {format_duration(sleep_seconds)}")
-            time.sleep(sleep_seconds)
-            continue
+    instance = SingleInstance(settings.data_dir)
+    try:
+        instance.acquire()
+    except RuntimeError as exc:
+        print(str(exc))
+        return
 
-        run_once(settings)
-        sleep_seconds = next_interval_seconds(settings)
-        print(f"next run after {format_duration(sleep_seconds)}")
-        time.sleep(sleep_seconds)
+    try:
+        while True:
+            if not is_active_now(settings):
+                sleep_seconds = seconds_until_next_active_window(settings)
+                print(f"outside active window, sleep {format_duration(sleep_seconds)}")
+                time.sleep(sleep_seconds)
+                continue
+
+            run_once(settings)
+            sleep_seconds = next_interval_seconds(settings)
+            print(f"next run after {format_duration(sleep_seconds)}")
+            time.sleep(sleep_seconds)
+    finally:
+        instance.release()
 
 
 if __name__ == "__main__":
