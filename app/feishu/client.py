@@ -40,6 +40,9 @@ class FeishuNotifier:
                     timeout=10,
                 )
                 response.raise_for_status()
+                data = response.json()
+                if data.get("code", 0) != 0:
+                    raise RuntimeError(f"Feishu webhook error: {data}")
                 last_error = None
                 break
             except Exception as exc:
