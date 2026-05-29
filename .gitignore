@@ -9,8 +9,5 @@ data/*
 !data/.gitkeep
 data_verify/
 logs/
-build/
-dist/
-*.spec
 .pytest_cache/
 .mypy_cache/
