@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,39 +27,6 @@ def _int(name: str, default: int) -> int:
 def _csv(name: str) -> list[str]:
     value = os.getenv(name, "")
     return [item.strip() for item in value.split(",") if item.strip()]
-
-
-def _find_env_file() -> Path | None:
-    env_file = os.getenv("ENV_FILE", ".env")
-    env_path = Path(env_file)
-    if env_path.is_absolute() and env_path.exists():
-        return env_path
-
-    candidate_dirs: list[Path] = [Path.cwd()]
-    if getattr(sys, "frozen", False):
-        exe_dir = Path(sys.executable).resolve().parent
-        candidate_dirs.extend([exe_dir, exe_dir.parent])
-    else:
-        source_dir = Path(__file__).resolve().parent
-        candidate_dirs.extend([source_dir, *source_dir.parents])
-
-    seen: set[Path] = set()
-    for directory in candidate_dirs:
-        directory = directory.resolve()
-        if directory in seen:
-            continue
-        seen.add(directory)
-        candidate = directory / env_path
-        if candidate.exists():
-            return candidate
-    return None
-
-
-def _resolve_data_dir(base_dir: Path) -> Path:
-    data_dir = Path(os.getenv("DATA_DIR", "data"))
-    if data_dir.is_absolute():
-        return data_dir
-    return base_dir / data_dir
 
 
 @dataclass(frozen=True)
@@ -120,10 +86,12 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    env_path = _find_env_file()
     if load_dotenv:
-        load_dotenv(dotenv_path=env_path or ".env", override=True, encoding="utf-8-sig")
-    base_dir = env_path.parent if env_path else Path.cwd()
+        load_dotenv(
+            dotenv_path=os.getenv("ENV_FILE", ".env"),
+            override=True,
+            encoding="utf-8-sig",
+        )
 
     interval_seconds = _int("INTERVAL_SECONDS", 7200)
 
@@ -174,7 +142,7 @@ def load_settings() -> Settings:
         min_fundamental_score=_int("MIN_FUNDAMENTAL_SCORE", 70),
         quality_stock_codes=set(_csv("QUALITY_STOCK_CODES")),
         min_recommend_score=_int("MIN_RECOMMEND_SCORE", 85),
-        data_dir=_resolve_data_dir(base_dir),
+        data_dir=Path(os.getenv("DATA_DIR", "data")),
         feishu_webhook=os.getenv("FEISHU_WEBHOOK", ""),
         feishu_app_id=os.getenv("FEISHU_APP_ID", ""),
         feishu_app_secret=os.getenv("FEISHU_APP_SECRET", ""),

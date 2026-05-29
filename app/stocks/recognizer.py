@@ -27,7 +27,7 @@ class StockRecognizer:
     def __init__(self, data_dir: Path) -> None:
         self.data_dir = data_dir
         self.cache_path = data_dir / "a_stock_universe.json"
-        self.alias_path = data_dir.parent / "config" / "stock_aliases.csv"
+        self.alias_path = Path("config") / "stock_aliases.csv"
         self._stocks: list[StockInfo] | None = None
         self._aliases: list[tuple[str, StockInfo]] | None = None
 
