@@ -259,9 +259,18 @@ def build_fundamental_scores(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true", help="Run one cycle and exit")
+    parser.add_argument("--check-config", action="store_true", help="Print config summary and exit")
     args = parser.parse_args()
 
     settings = load_settings()
+    if args.check_config:
+        collectors = build_collectors(settings)
+        print(f"dry_run={settings.dry_run}")
+        print(f"webhook_configured={bool(settings.feishu_webhook)}")
+        print(f"data_dir={settings.data_dir}")
+        print(f"collectors={','.join(collector.name for collector in collectors) or 'none'}")
+        return
+
     if args.once:
         run_once(settings)
         return
